@@ -2,6 +2,13 @@
 
 **Public repo:** [github.com/tecadrise-ai/tecadrise-tgp-mcp](https://github.com/tecadrise-ai/tecadrise-tgp-mcp)
 
+## Demo
+
+[![TGP canvas demo: an agent works through a gated blog workflow, a failed check gets retried, a human approves, and the run finishes](docs/demo/tgp-demo.gif)](docs/demo/tgp-demo.mp4)
+
+[Watch the full demo video (MP4, 1 minute, 1080p)](docs/demo/tgp-demo.mp4)
+
+
 TGP forces an LLM agent through a multi step workflow in a fixed, gated order. A workflow is a YAML template of stages and tasks. The engine, not the agent, decides what is open, checks the work, and unlocks the next stage only when every task in the current stage passed its gates. The agent only ever sees the step(s) open right now. A human watches the run live on a canvas in the browser and can approve, pause, retry, skip or abort.
 
 ```
