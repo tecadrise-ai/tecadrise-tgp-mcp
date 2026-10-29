@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TGP Canvas</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --line: #dfe3ea;
+    --text: #1c2230;
+    --muted: #6b7385;
+    --green: #16a34a;
+    --green-bg: #ecfdf3;
+    --green-line: #a7e3bd;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --red-line: #f5b5b5;
+    --amber: #b45309;
+    --amber-bg: #fffbeb;
+    --blue: #2563eb;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+    display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 56px 1fr;
+    grid-template-areas: "top top" "side main";
+  }
+  /* top bar */
+  .top { grid-area: top; display: flex; align-items: center; gap: 14px; padding: 0 20px;
+         border-bottom: 1px solid var(--line); background: var(--panel); }
+  .brand { font-weight: 700; letter-spacing: .5px; }
+  .brand span { color: var(--green); }
+  .top .spacer { flex: 1; }
+  .url { display: flex; align-items: center; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 8px; padding: 4px 10px; color: var(--muted); font-family: Consolas, monospace; font-size: 12px; }
+  .url input { border: 0; background: transparent; font: inherit; color: var(--text); outline: none; width: 220px; padding: 0; }
+  .url input:disabled { color: var(--text); }
+  .url.bad { border-color: var(--red); }
+  .err { color: var(--red); font-size: 12px; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+           padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: #b9c0cd; background: var(--panel-2); }
+  button.primary { background: var(--green); color: #fff; border-color: var(--green); font-weight: 600; }
+  button.primary:hover { background: #15803d; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  button.small { padding: 3px 9px; font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; }
+  .seg button.on { background: var(--panel-2); color: var(--green); font-weight: 600; }
+
+  /* left pane */
+  .side { grid-area: side; border-right: 1px solid var(--line); background: var(--panel); padding: 16px; overflow: auto; }
+  .side h4 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .8px; }
+  .field input, .field textarea { width: 100%; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+                                  border-radius: 8px; padding: 7px 9px; font: inherit; }
+  .field textarea { min-height: 64px; resize: vertical; }
+  .field input:disabled, .field textarea:disabled { background: var(--panel-2); border-color: transparent; color: var(--text); }
+  .kv { font-family: Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .timeline { margin-top: 22px; }
+  .ev { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .ev .ts { color: var(--muted); font-family: Consolas, monospace; flex: none; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+
+  /* main */
+  .main { grid-area: main; overflow: auto; padding: 24px 28px; }
+  .runhead .title { font-size: 24px; font-weight: 700; margin: 0; }
+  .runhead input.title { background: transparent; border: 1px dashed var(--line); color: var(--text); border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 24px; font-weight: 700; width: 520px; max-width: 100%; }
+  .runhead .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+  .chip.active { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
+  .chip.completed { color: var(--blue); border-color: #bcd0fb; background: #eff4ff; }
+  .chip.failed { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
+  .chip.draft { color: var(--amber); border-color: #f3d79a; background: var(--amber-bg); }
+  .stats { display: flex; gap: 22px; margin: 16px 0 10px; color: var(--muted); font-size: 12px; }
+  .stats b { color: var(--text); }
+  .progress { height: 6px; background: #e6e9ef; border-radius: 999px; overflow: hidden; margin: 0 0 24px; }
+  .progress > div { height: 100%; background: var(--green); transition: width .4s; }
+  .banner { background: var(--amber-bg); border: 1px solid #f3d79a; color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-top: 14px; font-size: 12px; }
+
+  .board { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 20px; }
+  .stage { min-width: 250px; width: 250px; }
+  .stagehead { display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--muted);
+               font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .stage.locked { opacity: .5; }
+  .stage.open .stagehead { color: var(--green); font-weight: 600; }
+  .lanes { display: flex; flex-direction: column; gap: 10px; }
+  .connector { align-self: center; color: #b9c0cd; font-size: 22px; margin-top: 22px; }
+
+  .task { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 12px 12px 16px;
+          cursor: pointer; position: relative; overflow: hidden; box-shadow: 0 1px 2px rgba(20,30,50,.04); }
+  .task::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--line); }
+  .task.in_progress { border-color: var(--green-line); background: var(--green-bg); }
+  .task.in_progress::before, .task.completed::before { background: var(--green); }
+  .task.failed { border-color: var(--red-line); background: var(--red-bg); }
+  .task.failed::before { background: var(--red); }
+  .task.skipped { border-style: dashed; }
+  .task.skipped .tt { text-decoration: line-through; color: var(--muted); }
+  .task.sel { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .task .row { display: flex; align-items: center; gap: 8px; }
+  .task .tt { font-weight: 600; flex: 1; }
+  .task .ds { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .task .ft { margin-top: 8px; display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-family: Consolas, monospace; }
+  .in_progress .status, .completed .status { color: var(--green); }
+  .failed .status { color: var(--red); }
+
+  .diode { width: 10px; height: 10px; border-radius: 50%; background: #cfd5df; flex: none; }
+  .in_progress .diode { background: var(--green); animation: pulse 1.4s infinite; }
+  .completed .diode { background: var(--green); }
+  .failed .diode { background: var(--red); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.55); } 70% { box-shadow: 0 0 0 9px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+
+  .addtask { border: 1px dashed #c4cad6; border-radius: var(--radius); padding: 8px; text-align: center; color: var(--muted); cursor: pointer; font-size: 12px; }
+  .addtask:hover { color: var(--green); border-color: var(--green); }
+  .addstage { min-width: 110px; align-self: stretch; border: 1px dashed #c4cad6; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; }
+  .addstage:hover { color: var(--green); border-color: var(--green); }
+  .zoomtag { position: fixed; right: 16px; bottom: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+             padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .zoomtag:hover { color: var(--text); border-color: #b9c0cd; }
+  .notfound { max-width: 420px; margin: 80px auto; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">TGP <span>Canvas</span></div>
+  <div class="url" id="urlbox"><span id="urlbase"></span><input id="idinp" spellcheck="false"></div>
+  <span class="err" id="iderr"></span>
+  <button id="copy" class="small">Copy link</button>
+  <div class="spacer"></div>
+  <button id="sim">Simulate agent</button>
+  <button id="startbtn" class="primary">Start run</button>
+</div>
+
+<div class="zoomtag" id="zoomtag" title="Ctrl + mouse wheel to zoom, click or Ctrl+0 to reset">100%</div>
+<div class="side" id="side"></div>
+<div class="main" id="main"></div>
+
+<script>
+const uid = (n = 6) => Math.random().toString(36).slice(2, 2 + n);
+const now = () => new Date().toLocaleTimeString([], { hour12: false });
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const slug = s => s.toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+
+// storage: one record per canvas id (stands in for the server DB)
+const KEY = 'tgp_runs';
+const store = {
+  all() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
+  save(runs) { localStorage.setItem(KEY, JSON.stringify(runs)); }
+};
+let runs = store.all();
+const persist = () => store.save(runs);
+
+const state = { id: null, selTask: null, zoom: 1 };
+const run = () => runs[state.id];
+// a canvas is always editable by whoever holds it: the user and the agent share it
+const isOwner = () => true;
+const allTasks = r => r.stages.flat();
+const doneSt = t => ['completed', 'skipped'].includes(t.status);
+const openStage = r => r.stages.findIndex(s => s.some(t => !doneSt(t)));
+const log = (r, text) => r.events.push({ ts: now(), text });
+
+function mkTask(title, description = '', status = 'pending', extra = {}) {
+  return { id: 't_' + uid(), title, description, status, done_when: '', worker: null, result: null, error: null, ...extra };
+}
+function createRun(id, title, stages, status = 'draft') {
+  runs[id] = { id, title, status, stages, events: [{ ts: now(), text: 'Canvas created' }] };
+  persist();
+  return runs[id];
+}
+function seed() {
+  const a = createRun('car-types-xxx', 'Identify car types on xxx.com', [
+    [mkTask('Open xxx.com', 'Navigate and accept cookies', 'completed', { result: 'Loaded, 1.2s', worker: 'agent-1' })],
+    [mkTask('Get all images', 'Collect every img src on the page', 'in_progress', { worker: 'agent-1' }),
+     mkTask('Get page text', 'Extract visible text for context', 'in_progress', { worker: 'agent-2' })],
+    [mkTask('Find images of a car', 'Filter the image set by content'),
+     mkTask('Summarize text', 'Three sentence summary')],
+    [mkTask('Identify car type', 'Make and model for each car image', 'pending', { done_when: 'Every car image has a label' })],
+  ], 'active');
+  log(a, 'Run started'); log(a, 'agent-1 claimed Get all images'); log(a, 'agent-2 claimed Get page text');
+  createRun('weekly-seo-report', 'Weekly SEO report', [
+    [mkTask('Pull rankings', '', 'completed', { result: '120 keywords' })],
+    [mkTask('Fetch backlinks', '', 'failed', { error: 'API rate limit (429)' }), mkTask('Fetch traffic', '', 'completed', { result: 'OK' })],
+    [mkTask('Write report')],
+  ], 'active');
+  persist();
+}
+
+// routing: #/r/<id>   (becomes /r/<id> once served by the real server)
+const getRouteId = () => { const m = location.hash.match(/^#\/r\/([^/?]+)/); return m ? decodeURIComponent(m[1]) : null; };
+function go(id) { location.hash = '#/r/' + encodeURIComponent(id); }
+function route() {
+  const id = getRouteId();
+  if (!id) {
+    // no id: open a fresh canvas with a random unique id
+    let n; do { n = 'canvas-' + uid(6); } while (runs[n]);
+    createRun(n, 'Untitled canvas', [[mkTask('First task')]]);
+    return go(n);
+  }
+  state.id = id; state.selTask = null;
+  render();
+}
+window.addEventListener('hashchange', route);
+
+function runStatus(r) {
+  if (r.status === 'draft') return 'draft';
+  if (allTasks(r).every(doneSt)) return 'completed';
+  if (allTasks(r).some(t => t.status === 'failed')) return 'failed';
+  return 'active';
+}
+
+function taskHtml(t) {
+  const label = { pending: 'pending', in_progress: 'in progress', completed: 'done', failed: 'failed', skipped: 'skipped' }[t.status];
+  return `<div class="task ${t.status} ${state.selTask === t.id ? 'sel' : ''}" data-t="${t.id}">
+    <div class="row"><span class="diode"></span><span class="tt">${esc(t.title)}</span></div>
+    ${t.description ? `<div class="ds">${esc(t.description)}</div>` : ''}
+    <div class="ft"><span class="status">${label}</span><span>${t.worker ? esc(t.worker) : ''}</span></div></div>`;
+}
+
+function renderTop(r) {
+  const base = (location.protocol === 'file:' ? 'http://localhost:8787' : location.origin) + '/r/';
+  document.getElementById('urlbase').textContent = base;
+  const inp = document.getElementById('idinp');
+  if (document.activeElement !== inp) inp.value = r ? r.id : state.id;
+  inp.disabled = !r || !isOwner();
+  document.getElementById('iderr').textContent = '';
+  document.getElementById('urlbox').classList.remove('bad');
+  document.getElementById('startbtn').style.display = (r && r.status === 'draft' && isOwner()) ? '' : 'none';
+  document.getElementById('sim').style.display = (r && r.status === 'active') ? '' : 'none';
+}
+
+function renderMain() {
+  const m = document.getElementById('main'), r = run();
+  if (!r) {
+    m.innerHTML = `<div class="notfound"><h2>Canvas "${esc(state.id)}" does not exist</h2>
+      <p class="kv">Create it with this id, or open a new canvas.</p>
+      <button class="primary" id="mk">Create "${esc(state.id)}"</button> <button id="rnd">New random canvas</button></div>`;
+    document.getElementById('mk').onclick = () => { createRun(slug(state.id) || 'canvas-' + uid(), state.id, [[mkTask('First task')]]); route(); };
+    document.getElementById('rnd').onclick = () => { location.hash = ''; };
+    return;
+  }
+  const st = runStatus(r), tasks = allTasks(r);
+  const done = tasks.filter(doneSt).length;
+  const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  const os = openStage(r), draft = r.status === 'draft' && isOwner();
+
+  let html = `<div class="runhead">
+      ${draft ? `<input class="title" id="titleinp" value="${esc(r.title)}">` : `<h1 class="title">${esc(r.title)}</h1>`}
+      <div class="sub"><span class="chip ${st}">${st}</span>${os >= 0 && r.status !== 'draft' ? ` &nbsp;stage ${os + 1} of ${r.stages.length}` : ''}</div></div>`;
+  if (isOwner() && r.status === 'active') html += `<div class="banner">Shared canvas: you can edit pending tasks while the agent works. The agent only receives the open stage.</div>`;
+  html += `<div class="stats"><span><b>${done}</b> / ${tasks.length} done</span><span><b>${tasks.filter(t => t.status === 'in_progress').length}</b> running</span><span><b>${tasks.filter(t => t.status === 'failed').length}</b> failed</span></div>
+    <div class="progress"><div style="width:${pct}%"></div></div><div class="board" style="zoom:${state.zoom}">`;
+  r.stages.forEach((s, si) => {
+    const locked = os >= 0 && si > os && r.status !== 'draft';
+    const open = si === os && r.status !== 'draft';
+    html += `<div class="stage ${locked ? 'locked' : ''} ${open ? 'open' : ''}">
+      <div class="stagehead"><span>Stage ${si + 1}${s.length > 1 ? ` &middot; ${s.length} parallel` : ''}</span>${locked ? '<span>locked</span>' : open ? '<span>open</span>' : ''}</div>
+      <div class="lanes">${s.map(taskHtml).join('')}${isOwner() ? `<div class="addtask" data-add="${si}">+ Add parallel task</div>` : ''}</div></div>`;
+    if (si < r.stages.length - 1) html += `<div class="connector">&rsaquo;</div>`;
+  });
+  if (isOwner()) html += `<div class="addstage" id="addstage">+ Add stage</div>`;
+  m.innerHTML = html + `</div>`;
+
+  m.querySelectorAll('.task').forEach(el => el.onclick = () => { state.selTask = el.dataset.t; renderMain(); renderSide(); });
+  m.querySelectorAll('[data-add]').forEach(el => el.onclick = () => {
+    r.stages[+el.dataset.add].push(mkTask('New task')); log(r, 'Task added to stage ' + (+el.dataset.add + 1)); persist(); render();
+  });
+  const as = document.getElementById('addstage');
+  if (as) as.onclick = () => { r.stages.push([mkTask('New task')]); log(r, 'Stage added'); persist(); render(); };
+  const ti = document.getElementById('titleinp');
+  if (ti) ti.oninput = () => { r.title = ti.value; persist(); };
+}
+
+function findTask(r, id) {
+  for (let si = 0; si < r.stages.length; si++) { const i = r.stages[si].findIndex(t => t.id === id); if (i >= 0) return { si, i, t: r.stages[si][i] }; }
+  return null;
+}
+
+function renderSide() {
+  const r = run(), d = document.getElementById('side');
+  if (!r) { d.innerHTML = ''; return; }
+  const f = state.selTask && findTask(r, state.selTask);
+  let html = `<h4>Task</h4>`;
+  if (f) {
+    const t = f.t, editable = isOwner() && t.status === 'pending';
+    html += `<div class="field"><label>Title</label><input id="d_title" value="${esc(t.title)}" ${editable ? '' : 'disabled'}></div>
+      <div class="field"><label>Description</label><textarea id="d_desc" ${editable ? '' : 'disabled'}>${esc(t.description)}</textarea></div>
+      <div class="field"><label>Done when</label><input id="d_done" value="${esc(t.done_when)}" ${editable ? '' : 'disabled'} placeholder="Optional acceptance criteria"></div>
+      <div class="field kv">id: ${t.id}<br>stage: ${f.si + 1}<br>status: ${t.status}<br>worker: ${t.worker || '-'}</div>`;
+    if (t.result) html += `<div class="field"><label>Result</label><div class="kv">${esc(t.result)}</div></div>`;
+    if (t.error) html += `<div class="field"><label>Error</label><div class="kv" style="color:var(--red)">${esc(t.error)}</div></div>`;
+    if (isOwner()) {
+      html += `<div style="display:flex;gap:8px;flex-wrap:wrap">`;
+      if (t.status === 'failed') html += `<button id="a_retry" class="small">Retry</button><button id="a_skip" class="small">Skip</button>`;
+      if (t.status === 'pending') html += `<button id="a_del" class="small danger">Delete task</button>`;
+      html += `</div>`;
+    }
+  } else html += `<div class="empty">Select a task to see details</div>`;
+  html += `<div class="timeline"><h4>Timeline</h4>${r.events.slice().reverse().map(e => `<div class="ev"><span class="ts">${e.ts}</span><span>${esc(e.text)}</span></div>`).join('')}</div>`;
+  d.innerHTML = html;
+
+  if (f) {
+    const t = f.t, q = id => document.getElementById(id);
+    const bind = (id, k) => { const el = q(id); if (el) el.oninput = () => { t[k] = el.value; persist(); if (k !== 'done_when') renderMain(); }; };
+    bind('d_title', 'title'); bind('d_desc', 'description'); bind('d_done', 'done_when');
+    if (q('a_retry')) q('a_retry').onclick = () => { t.status = 'pending'; t.error = null; log(r, `Retry: ${t.title}`); persist(); render(); };
+    if (q('a_skip')) q('a_skip').onclick = () => { t.status = 'skipped'; log(r, `Skipped: ${t.title}`); persist(); render(); };
+    if (q('a_del')) q('a_del').onclick = () => {
+      r.stages[f.si].splice(f.i, 1); if (!r.stages[f.si].length) r.stages.splice(f.si, 1);
+      state.selTask = null; log(r, `Deleted: ${t.title}`); persist(); render();
+    };
+  }
+}
+
+function render() { const r = run(); renderTop(r); renderMain(); renderSide(); }
+
+// canvas id rename: unique, url-safe name, editable by owner (agents do the same via MCP rename_run)
+const idinp = document.getElementById('idinp');
+function commitId() {
+  const r = run(); if (!r) return;
+  const n = slug(idinp.value), err = document.getElementById('iderr'), box = document.getElementById('urlbox');
+  if (n === r.id) { idinp.value = n; err.textContent = ''; box.classList.remove('bad'); return; }
+  if (!n) { err.textContent = 'Id cannot be empty'; box.classList.add('bad'); return; }
+  if (runs[n]) { err.textContent = `"${n}" is taken`; box.classList.add('bad'); return; }
+  delete runs[r.id]; r.id = n; runs[n] = r; log(r, `Id renamed to ${n}`); persist();
+  state.id = n; history.replaceState(null, '', '#/r/' + encodeURIComponent(n)); render();
+}
+idinp.onblur = commitId;
+idinp.onkeydown = e => { if (e.key === 'Enter') idinp.blur(); };
+
+document.getElementById('startbtn').onclick = () => { const r = run(); r.status = 'active'; log(r, 'Run started'); persist(); render(); };
+document.getElementById('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(document.getElementById('urlbase').textContent + run().id);
+// agent simulator: advances the open stage like a real TGP loop
+document.getElementById('sim').onclick = () => {
+  const r = run(); if (!r || r.status !== 'active') return;
+  const os = openStage(r); if (os < 0) return;
+  const stage = r.stages[os];
+  if (stage.some(t => t.status === 'failed')) { log(r, 'Blocked: a task failed, waiting for retry or skip'); persist(); render(); return; }
+  const running = stage.filter(t => t.status === 'in_progress');
+  if (running.length) running.forEach(t => { t.status = 'completed'; t.result = 'Done by simulator'; log(r, `${t.worker || 'agent'} completed ${t.title}`); });
+  else stage.filter(t => t.status === 'pending').forEach((t, i) => { t.status = 'in_progress'; t.worker = 'agent-' + (i + 1); log(r, `${t.worker} claimed ${t.title}`); });
+  if (allTasks(r).every(doneSt)) log(r, 'Run completed');
+  persist(); render();
+};
+
+// zoom: Ctrl + mouse wheel zooms the board around the cursor, Ctrl+0 resets
+function setZoom(z, clientX, clientY) {
+  const main = document.getElementById('main'), old = state.zoom;
+  z = Math.min(2, Math.max(0.3, Math.round(z * 100) / 100));
+  if (z === old) return;
+  const rect = main.getBoundingClientRect();
+  const ox = (clientX ?? rect.left + rect.width / 2) - rect.left, oy = (clientY ?? rect.top + rect.height / 2) - rect.top;
+  const px = ox + main.scrollLeft, py = oy + main.scrollTop;
+  state.zoom = z;
+  const b = main.querySelector('.board'); if (b) b.style.zoom = z;
+  main.scrollLeft = px * (z / old) - ox; main.scrollTop = py * (z / old) - oy;
+  document.getElementById('zoomtag').textContent = Math.round(z * 100) + '%';
+}
+document.getElementById('main').addEventListener('wheel', e => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  setZoom(state.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX, e.clientY);
+}, { passive: false });
+document.addEventListener('keydown', e => { if (e.ctrlKey && (e.key === '0')) { e.preventDefault(); setZoom(1); } });
+document.getElementById('zoomtag').onclick = () => setZoom(1);
+
+if (!Object.keys(runs).length) seed();
+if (!getRouteId()) location.hash = '#/r/car-types-xxx';
+route();
+</script>
+</body>
+</html>

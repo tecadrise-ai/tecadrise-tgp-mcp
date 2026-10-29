@@ -1,0 +1,193 @@
+# TGP primary demo: 12 tiny file tasks, no external tools needed.
+# Every task has a machine-checked gate. Stage 6 has two parallel lanes,
+# task human_review needs a manual approval.
+# Portable: command gates use shell: node, so the same template runs on
+# Linux, macOS and Windows. The workdir defaults to the OS temp dir
+# ({{tmp}} is /tmp on Linux and %TEMP% on Windows).
+id: dummy-12
+title: Dummy 12-step demo
+description: Twelve small file tasks that exercise every core TGP feature.
+params:
+  workdir:
+    default: "{{tmp}}/tgp-dummy/{{run_id}}"
+    description: Directory where all files of this run are written
+settings:
+  stop_on_fail: true
+  max_attempts: 3
+  lease_s: 600
+stages:
+  - title: Setup
+    tasks:
+      - id: make_workdir
+        title: Create the work directory
+        description: Create the directory {{workdir}}, including any missing parent directories.
+        done_when: The directory exists.
+        gates:
+          - type: file_exists
+            path: "{{workdir}}"
+            kind: dir
+
+  - tasks:
+      - id: write_hello
+        title: Write hello.txt
+        description: Write exactly one line "hello tgp" to {{workdir}}/hello.txt.
+        done_when: hello.txt contains the line hello tgp.
+        gates:
+          - type: file_exists
+            path: "{{workdir}}/hello.txt"
+            min_bytes: 9
+          - type: regex_in_file
+            path: "{{workdir}}/hello.txt"
+            pattern: "^hello tgp$"
+            flags: m
+
+  - tasks:
+      - id: append_line
+        title: Append a line to hello.txt
+        description: Append a second line "line two" to {{workdir}}/hello.txt, keeping the first line.
+        done_when: hello.txt has exactly two lines, hello tgp then line two.
+        gates:
+          - type: command
+            label: hello.txt has exactly the two expected lines
+            shell: node
+            run: |
+              const lines = require('fs').readFileSync('hello.txt', 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n');
+              console.log(JSON.stringify(lines));
+              process.exit(lines.length === 2 && lines[0] === 'hello tgp' && lines[1] === 'line two' ? 0 : 1);
+            timeout_s: 10
+
+  - tasks:
+      - id: write_nums
+        title: Write the numbers 1 to 10
+        description: Write the numbers 1 to 10 to {{workdir}}/nums.txt, one per line.
+        done_when: nums.txt holds exactly the lines 1 to 10.
+        gates:
+          - type: command
+            label: nums.txt holds exactly the lines 1 to 10
+            shell: node
+            run: |
+              const got = require('fs').readFileSync('nums.txt', 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\n$/, '');
+              const want = Array.from({ length: 10 }, (_, i) => String(i + 1)).join('\n');
+              if (got !== want) { console.error('expected lines 1..10, got: ' + JSON.stringify(got)); process.exit(1); }
+            timeout_s: 10
+
+  - tasks:
+      - id: write_sum
+        title: Write the sum
+        description: Add up the numbers in nums.txt and write only the sum to {{workdir}}/sum.txt. Mention the sum in your --result.
+        done_when: sum.txt holds the correct sum.
+        gates:
+          - type: regex_in_file
+            label: sum.txt contains exactly 55
+            path: "{{workdir}}/sum.txt"
+            pattern: "^55\\s*$"
+          - type: result_matches
+            pattern: "\\b55\\b"
+            hint: Put the computed sum in your --result text.
+
+  - title: Transform (2 parallel lanes)
+    tasks:
+      - id: make_upper
+        title: Write an uppercase copy
+        description: Write an uppercase copy of hello.txt to {{workdir}}/upper.txt.
+        done_when: upper.txt equals hello.txt in upper case.
+        gates:
+          - type: command
+            label: upper.txt is hello.txt in upper case
+            shell: node
+            run: |
+              const fs = require('fs'), norm = s => s.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\n$/, '');
+              const want = norm(fs.readFileSync('hello.txt', 'utf8')).toUpperCase(), got = norm(fs.readFileSync('upper.txt', 'utf8'));
+              if (got !== want) { console.error('expected ' + JSON.stringify(want) + ', got ' + JSON.stringify(got)); process.exit(1); }
+            timeout_s: 10
+      - id: count_words
+        title: Count the words
+        description: Count the words in hello.txt, write the number to {{workdir}}/count.txt and report it with --output words=<n>.
+        done_when: count.txt holds the word count and the words output is reported.
+        outputs: [words]
+        gates:
+          - type: regex_in_file
+            label: count.txt contains exactly 4
+            path: "{{workdir}}/count.txt"
+            pattern: "^4\\s*$"
+
+  - tasks:
+      - id: make_parts
+        title: Split into part files
+        description: Create {{workdir}}/parts/ with exactly three non-empty files part1.txt, part2.txt and part3.txt.
+        done_when: Exactly three non-empty part files exist.
+        gates:
+          - type: glob_count
+            pattern: "parts/part*.txt"
+            cwd: "{{workdir}}"
+            eq: 3
+          - type: command
+            label: every part file is non-empty
+            shell: node
+            run: |
+              const fs = require('fs'), path = require('path');
+              const empty = fs.readdirSync('parts').filter(f => /^part.*\.txt$/.test(f) && fs.statSync(path.join('parts', f)).size === 0);
+              if (empty.length) { console.error('empty: ' + empty.join(', ')); process.exit(1); }
+            timeout_s: 10
+
+  - tasks:
+      - id: write_meta
+        title: Write meta.json
+        description: 'Write {{workdir}}/meta.json with the keys run_id (set to "{{run_id}}"), name (set to "dummy-12") and files (a list of the file names you created so far).'
+        done_when: meta.json is valid JSON with the right run_id and name.
+        gates:
+          - type: json_has_keys
+            path: "{{workdir}}/meta.json"
+            keys: [run_id, name, files]
+            equals:
+              run_id: "{{run_id}}"
+              name: dummy-12
+
+  - tasks:
+      - id: human_review
+        title: Human review checkpoint
+        description: Tell the human that the files in {{workdir}} are ready for review and give them the canvas link. Report done, then wait until the human approves.
+        done_when: A human approved the work so far.
+        gates:
+          - type: result_matches
+            pattern: "review|ready|approv"
+            flags: i
+            hint: Your --result should say that you asked the human to review.
+          - type: manual
+            prompt: Check the files in the workdir, then approve.
+
+  - tasks:
+      - id: write_report
+        title: Write report.md
+        description: 'Write {{workdir}}/report.md. First line "# Report", then a line "sum: 55" and a line "words: {{tasks.count_words.outputs.words}}".'
+        done_when: report.md has the heading and both lines.
+        gates:
+          - type: regex_in_file
+            path: "{{workdir}}/report.md"
+            pattern: "^# Report"
+          - type: regex_in_file
+            path: "{{workdir}}/report.md"
+            pattern: "^sum: 55$"
+            flags: m
+          - type: regex_in_file
+            path: "{{workdir}}/report.md"
+            pattern: "^words: {{tasks.count_words.outputs.words}}$"
+            flags: m
+
+  - tasks:
+      - id: write_summary
+        title: Write summary.json
+        description: 'Write {{workdir}}/summary.json with run_id "{{run_id}}", sum 55, words (the number counted earlier), status "ok" and files (list of all files in the workdir).'
+        done_when: summary.json has all keys with correct values.
+        gates:
+          - type: json_has_keys
+            path: "{{workdir}}/summary.json"
+            keys: [run_id, sum, words, status, files]
+            equals:
+              run_id: "{{run_id}}"
+              sum: 55
+              words: "{{tasks.count_words.outputs.words}}"
+              status: ok
+          - type: result_matches
+            pattern: summary\.json
+            hint: Mention summary.json in your --result.

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314213d'/%3E%3Cpath d='M32 17v8M32 35v8' stroke='%238a94a6' stroke-width='3' stroke-linecap='round'/%3E%3Crect x='14' y='6' width='36' height='13' rx='4' fill='%2322c55e'/%3E%3Cpath d='M25 12.5l4 4 9-8' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='14' y='25.5' width='36' height='13' rx='4' fill='%23facc15'/%3E%3Ccircle cx='32' cy='32' r='3.5' fill='%2322c55e' stroke='%2314213d' stroke-width='1.5'/%3E%3Crect x='14' y='45' width='36' height='13' rx='4' fill='%233b4a66'/%3E%3Crect x='28' y='50' width='8' height='6' rx='1.2' fill='%23c7cfdc'/%3E%3Cpath d='M29.5 50v-2a2.5 2.5 0 0 1 5 0v2' fill='none' stroke='%23c7cfdc' stroke-width='1.6'/%3E%3C/svg%3E">
+<title>TGP Canvas</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --line: #dfe3ea;
+    --text: #1c2230;
+    --muted: #6b7385;
+    --green: #16a34a;
+    --green-bg: #ecfdf3;
+    --green-line: #a7e3bd;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --red-line: #f5b5b5;
+    --amber: #b45309;
+    --amber-bg: #fffbeb;
+    --blue: #2563eb;
+    --yellow: #a16207;
+    --yellow-bg: #fefce8;
+    --yellow-line: #fde047;
+    --yellow-bar: #eab308;
+    --orange: #c2410c;
+    --orange-bg: #fff7ed;
+    --orange-line: #fdba74;
+    --orange-bar: #f97316;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+    display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 56px 1fr;
+    grid-template-areas: "top top" "side main";
+  }
+  /* top bar */
+  .top { grid-area: top; display: flex; align-items: center; gap: 14px; padding: 0 20px;
+         border-bottom: 1px solid var(--line); background: var(--panel); }
+  .brand { font-weight: 700; letter-spacing: .5px; }
+  .brand span { color: var(--green); }
+  .top .spacer { flex: 1; }
+  .url { display: flex; align-items: center; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 8px; padding: 4px 10px; color: var(--muted); font-family: Consolas, monospace; font-size: 12px; }
+  .url input { border: 0; background: transparent; font: inherit; color: var(--text); outline: none; width: 220px; padding: 0; }
+  .url input:disabled { color: var(--text); }
+  .url.bad { border-color: var(--red); }
+  .err { color: var(--red); font-size: 12px; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+           padding: 6px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: #b9c0cd; background: var(--panel-2); }
+  button.primary { background: var(--green); color: #fff; border-color: var(--green); font-weight: 600; }
+  button.primary:hover { background: #15803d; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  button.small { padding: 3px 9px; font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; }
+  .seg button.on { background: var(--panel-2); color: var(--green); font-weight: 600; }
+
+  /* left pane */
+  .side { grid-area: side; border-right: 1px solid var(--line); background: var(--panel); padding: 16px; overflow: auto; }
+  .side h4 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .8px; }
+  .field input, .field textarea { width: 100%; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+                                  border-radius: 8px; padding: 7px 9px; font: inherit; }
+  .field textarea { min-height: 64px; resize: vertical; }
+  .field input:disabled, .field textarea:disabled { background: var(--panel-2); border-color: transparent; color: var(--text); }
+  .kv { font-family: Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .timeline { margin-top: 22px; }
+  .ev { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .ev .ts { color: var(--muted); font-family: Consolas, monospace; flex: none; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+
+  /* main */
+  .main { grid-area: main; overflow: auto; padding: 24px 28px; }
+  .runhead .title { font-size: 24px; font-weight: 700; margin: 0; }
+  .runhead input.title { background: transparent; border: 1px dashed var(--line); color: var(--text); border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 24px; font-weight: 700; width: 520px; max-width: 100%; }
+  .runhead .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+  .chip.active { color: var(--yellow); border-color: var(--yellow-line); background: var(--yellow-bg); }
+  .chip.completed { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
+  .chip.failed { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
+  .chip.draft { color: var(--amber); border-color: #f3d79a; background: var(--amber-bg); }
+  .stats { display: flex; gap: 22px; margin: 16px 0 10px; color: var(--muted); font-size: 12px; }
+  .stats b { color: var(--text); }
+  .progress { height: 6px; background: #e6e9ef; border-radius: 999px; overflow: hidden; margin: 0 0 24px; }
+  .progress > div { height: 100%; background: var(--green); transition: width .4s; }
+  .banner { background: var(--amber-bg); border: 1px solid #f3d79a; color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-top: 14px; font-size: 12px; }
+
+  .board { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 20px; max-width: 864px; }
+  .stage { width: 100%; scroll-margin: 24px; }
+  .stagehead { display: flex; gap: 12px; align-items: baseline; margin-bottom: 8px; color: var(--muted);
+               font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .stagehead .st { font-weight: 600; }
+  .stagehead .sm { text-transform: none; letter-spacing: 0; }
+  .stagehead .flag { margin-left: auto; }
+  .stage.locked { opacity: .5; }
+  .stage.open .stagehead { color: var(--green); font-weight: 600; }
+  .stage.open .lanes { border-color: var(--green-line); }
+  .lanes { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+  .lanes > .task { flex: 1 1 300px; min-width: 300px; max-width: 420px; }
+  .connector { align-self: flex-start; width: 300px; max-width: 420px; text-align: center; color: #b9c0cd; font-size: 18px; line-height: 1; margin: 6px 0 10px; user-select: none; }
+  .connector::before { content: ""; display: block; width: 2px; height: 12px; background: #d5dae3; margin: 0 auto 2px; }
+
+  .task { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 12px 12px 16px;
+          cursor: pointer; position: relative; overflow: hidden; box-shadow: 0 1px 2px rgba(20,30,50,.04); }
+  .task::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--line); }
+  /* card colors: done green, running yellow, awaiting approval orange, failed or stopped red */
+  .task.completed { border-color: var(--green-line); background: var(--green-bg); }
+  .task.completed::before { background: var(--green); }
+  .task.in_progress { border-color: var(--yellow-line); background: var(--yellow-bg); }
+  .task.in_progress::before { background: var(--yellow-bar); }
+  .task.failed { border-color: var(--red-line); background: var(--red-bg); }
+  .task.failed::before { background: var(--red); }
+  .task.skipped { border-style: dashed; }
+  .task.skipped .tt { text-decoration: line-through; color: var(--muted); }
+  .task.sel { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .task .row { display: flex; align-items: center; gap: 8px; }
+  .task .tt { font-weight: 600; flex: 1; }
+  .task .ds { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .task .ft { margin-top: 8px; display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-family: Consolas, monospace; }
+  .completed .status { color: var(--green); }
+  .in_progress .status { color: var(--yellow); }
+  .failed .status { color: var(--red); }
+
+  .diode { width: 10px; height: 10px; border-radius: 50%; background: #cfd5df; flex: none; }
+  /* status dot: running green (pulsing), done green, awaiting approval orange, failed or stopped red, pending or locked grey */
+  .in_progress .diode { background: var(--green); animation: pulse 1.4s infinite; }
+  .completed .diode { background: var(--green); }
+  .failed .diode { background: var(--red); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.6); } 70% { box-shadow: 0 0 0 9px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+
+  .addtask { border: 1px dashed #c4cad6; border-radius: var(--radius); padding: 8px; text-align: center; color: var(--muted); cursor: pointer; font-size: 12px; }
+  .addtask:hover { color: var(--green); border-color: var(--green); }
+  .addstage { min-width: 110px; align-self: stretch; border: 1px dashed #c4cad6; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; }
+  .addstage:hover { color: var(--green); border-color: var(--green); }
+  .zoomtag { position: fixed; right: 16px; bottom: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+             padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .zoomtag:hover { color: var(--text); border-color: #b9c0cd; }
+  .notfound { max-width: 420px; margin: 80px auto; text-align: center; }
+
+  /* TGP live additions */
+  .chip.paused { color: var(--amber); border-color: #f3d79a; background: var(--amber-bg); }
+  .chip.awaiting_approval { color: var(--orange); border-color: var(--orange-line); background: var(--orange-bg); }
+  .chip.blocked { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
+  .chip.done { color: var(--green); border-color: var(--green-line); background: var(--green-bg); }
+  .chip.aborted { color: var(--red); border-color: var(--red-line); background: var(--red-bg); }
+  .banner.orange { background: var(--orange-bg); border-color: var(--orange-line); color: var(--orange); }
+  .banner.red { background: var(--red-bg); border-color: var(--red-line); color: var(--red); }
+  .banner.gray { background: var(--panel-2); border-color: var(--line); color: var(--muted); }
+  .task.awaiting_approval { border-color: var(--orange-line); background: var(--orange-bg); }
+  .task.awaiting_approval::before { background: var(--orange-bar); }
+  .awaiting_approval .diode { background: var(--orange-bar); animation: pulseA 1.4s infinite; }
+  .awaiting_approval .status { color: var(--orange); }
+  .task.stopped { border-color: var(--red-line); background: var(--red-bg); }
+  .task.stopped::before, .stopped .diode { background: var(--red); }
+  .stopped .diode { animation: none; }
+  .stopped .status { color: var(--red); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin: 0 0 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid; }
+  .legend .l-done { background: var(--green-bg); border-color: var(--green); }
+  .legend .l-run { background: var(--yellow-bg); border-color: var(--yellow-bar); }
+  .legend .l-wait { background: var(--orange-bg); border-color: var(--orange-bar); }
+  .legend .l-fail { background: var(--red-bg); border-color: var(--red); }
+  .legend .l-pend { background: var(--panel); border-color: #cfd5df; }
+  @keyframes pulseA { 0% { box-shadow: 0 0 0 0 rgba(249,115,22,.55); } 70% { box-shadow: 0 0 0 9px rgba(249,115,22,0); } 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); } }
+  .task.gatefail { border-color: var(--red-line); }
+  .gates { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .g { width: 8px; height: 8px; border-radius: 2px; background: #cfd5df; }
+  .g.pass { background: var(--green); } .g.fail { background: var(--red); } .g.wait { background: var(--orange-bar); }
+  .gl { font-size: 12px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; background: var(--panel); }
+  .gl .gh { display: flex; gap: 6px; align-items: baseline; }
+  .gl .gk { font-weight: 600; font-size: 11px; }
+  .gl.pass .gk { color: var(--green); } .gl.fail .gk { color: var(--red); } .gl.wait .gk { color: var(--orange); } .gl.none .gk { color: var(--muted); }
+  .gl .gd { color: var(--muted); font-family: Consolas, monospace; font-size: 11px; margin-top: 3px; white-space: pre-wrap; word-break: break-word; }
+  .gl pre { margin: 4px 0 0; max-height: 140px; overflow: auto; background: var(--panel-2); padding: 6px; border-radius: 6px; font-size: 11px; white-space: pre-wrap; }
+  .val { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; background: var(--panel-2); border-radius: 6px; padding: 6px 8px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .live .dot { width: 8px; height: 8px; border-radius: 50%; background: #cfd5df; }
+  .live.on .dot { background: var(--green); } .live.off .dot { background: var(--red); }
+  .ev .et { color: var(--muted); font-size: 11px; }
+  .ev.gate_failed span:last-child, .ev.task_failed span:last-child { color: var(--red); }
+  .ev.task_completed span:last-child, .ev.run_completed span:last-child { color: var(--green); }
+  .ev.awaiting_approval span:last-child { color: var(--orange); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
+  textarea.snippet { width: 100%; min-height: 120px; font-family: Consolas, monospace; font-size: 11px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--panel-2); resize: vertical; }
+  a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><a href="/" style="color:inherit">TGP</a> <span>Canvas</span></div>
+  <div class="url" id="urlbox"><span id="urlbase"></span><input id="idinp" spellcheck="false" disabled></div>
+  <button id="copy" class="small">Copy link</button>
+  <span class="live" id="live"><span class="dot"></span><span id="livetxt">connecting</span></span>
+  <div class="spacer"></div>
+  <button id="pausebtn">Pause</button>
+  <button id="resumebtn" class="primary">Resume</button>
+  <button id="abortbtn" class="danger">Abort run</button>
+</div>
+
+<div class="zoomtag" id="zoomtag" title="Ctrl + mouse wheel to zoom, click or Ctrl+0 to reset">100%</div>
+<div class="side" id="side"></div>
+<div class="main" id="main"><div class="empty">Loading run...</div></div>
+
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString([], { hour12: false }) : '';
+const ago = iso => { if (!iso) return 'never'; const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000)); return s < 60 ? s + 's ago' : s < 3600 ? Math.round(s / 60) + 'm ago' : Math.round(s / 3600) + 'h ago'; };
+const dur = (a, b) => { if (!a) return ''; const s = Math.round(((b ? Date.parse(b) : Date.now()) - Date.parse(a)) / 1000); return s < 60 ? s + 's' : Math.floor(s / 60) + 'm' + String(s % 60).padStart(2, '0') + 's'; };
+const IDLE_MIN = 5;
+
+const RUN_ID = decodeURIComponent(location.pathname.split('/').filter(Boolean)[1] || '');
+const state = { snap: null, selTask: null, zoom: 1, err: null };
+const allTasks = r => r.stages.flatMap(s => s.tasks);
+const findTask = (r, id) => allTasks(r).find(t => t.task_id === id);
+
+async function api(path, body) {
+  const res = await fetch('/api/v1/runs/' + encodeURIComponent(RUN_ID) + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { alert((j.error && (j.error.message + ' ' + (j.error.hint || ''))) || ('HTTP ' + res.status)); return; }
+  setSnap(j);
+}
+
+function renderTop(r) {
+  document.getElementById('urlbase').textContent = location.origin + '/r/';
+  document.getElementById('idinp').value = RUN_ID;
+  const st = r ? r.status : '';
+  document.getElementById('pausebtn').style.display = st === 'active' ? '' : 'none';
+  document.getElementById('resumebtn').style.display = st === 'paused' ? '' : 'none';
+  document.getElementById('abortbtn').style.display = (st === 'active' || st === 'paused') ? '' : 'none';
+}
+
+function gateClass(g) { return g.passed === true ? 'pass' : g.passed === false ? 'fail' : g.passed === null ? 'wait' : 'none'; }
+
+function taskHtml(t) {
+  // a run aborted while this step was still open: the step stopped, show it red
+  const stopped = state.snap && state.snap.state === 'aborted' && ['in_progress', 'awaiting_approval'].includes(t.status);
+  const label = stopped ? 'stopped' : ({ pending: 'pending', in_progress: t.evaluating ? 'checking gates' : 'in progress', completed: 'done', failed: 'failed', skipped: 'skipped', awaiting_approval: 'awaiting approval' }[t.status] || t.status);
+  const lg = t.last_gate;
+  const gateFailOpen = t.status === 'in_progress' && lg && lg.passed === false;
+  const dots = t.gates.map((g, i) => { const r = lg && lg.results && lg.results[i]; return `<span class="g ${r ? gateClass(r) : ''}" title="${esc(g.label)}"></span>`; }).join('');
+  const right = [t.worker ? esc(t.worker) : '', t.attempts ? `try ${t.attempts}/${t.max_attempts}` : '', t.status === 'in_progress' ? dur(t.started_at) : (t.finished_at && t.started_at ? dur(t.started_at, t.finished_at) : '')].filter(Boolean).join(' &middot; ');
+  return `<div class="task ${stopped ? 'stopped' : t.status} ${gateFailOpen ? 'gatefail' : ''} ${state.selTask === t.task_id ? 'sel' : ''}" data-t="${esc(t.task_id)}">
+    <div class="row"><span class="diode"></span><span class="tt">${esc(t.title)}</span></div>
+    ${t.description ? `<div class="ds">${esc(t.description.length > 140 ? t.description.slice(0, 140) + '...' : t.description)}</div>` : ''}
+    <div class="gates">${dots}</div>
+    ${gateFailOpen ? `<div class="ds" style="color:var(--red)">gate failed, agent must fix and re-report</div>` : ''}
+    ${t.status === 'failed' && t.error ? `<div class="ds" style="color:var(--red)">${esc(t.error.slice(0, 160))}</div>` : ''}
+    <div class="ft"><span class="status">${label}</span><span>${right}</span></div></div>`;
+}
+
+function renderMain() {
+  const m = document.getElementById('main'), r = state.snap;
+  if (!r) {
+    m.innerHTML = state.err ? `<div class="notfound"><h2>Run "${esc(RUN_ID)}" not found</h2><p class="kv">${esc(state.err)}</p><a href="/">All runs</a></div>` : '<div class="empty">Loading run...</div>';
+    return;
+  }
+  const tasks = allTasks(r), p = r.progress;
+  let html = `<div class="runhead"><h1 class="title">${esc(r.title)}</h1>
+      <div class="sub"><span class="chip ${r.state}">${esc(r.state.replace('_', ' '))}</span>&nbsp; ${r.open_stage ? `stage ${r.open_stage} of ${p.stages_total}` : `${p.stages_total} stages`}
+      &nbsp;&middot;&nbsp; template <b>${esc(r.template)}</b> &nbsp;&middot;&nbsp; last agent call ${esc(ago(r.last_agent_at))}${r.last_agent ? ' (' + esc(r.last_agent) + ')' : ''}</div></div>`;
+  const idle = r.status === 'active' && r.state === 'active' && (!r.last_agent_at || Date.now() - Date.parse(r.last_agent_at) > IDLE_MIN * 60000);
+  if (r.state === 'blocked') html += `<div class="banner red">Blocked: a task failed and stop on fail holds the run. Select the failed task to retry or skip it, or abort the run.</div>`;
+  if (r.state === 'awaiting_approval' || tasks.some(t => t.status === 'awaiting_approval')) html += `<div class="banner orange">A task is waiting for your approval. Select the orange task and approve or reject it.</div>`;
+  if (r.state === 'paused') html += `<div class="banner">Paused. The agent receives no tasks until you resume.</div>`;
+  if (r.state === 'aborted') html += `<div class="banner red">This run was aborted. Steps that were still open are shown red as stopped.</div>`;
+  if (idle) html += `<div class="banner gray">Agent idle: no agent call in the last ${IDLE_MIN} minutes.</div>`;
+  html += `<div class="stats"><span><b>${p.completed}</b> / ${p.total} done</span><span><b>${tasks.filter(t => t.status === 'in_progress').length}</b> running</span><span><b>${p.failed}</b> failed</span><span><b>${p.skipped}</b> skipped</span><span>workdir <b class="kv">${esc(r.params.workdir || '')}</b></span></div>
+    <div class="progress"><div style="width:${p.percent}%"></div></div>
+    <div class="legend"><span><i class="l-done"></i>done</span><span><i class="l-run"></i>running</span><span><i class="l-wait"></i>awaiting approval</span><span><i class="l-fail"></i>failed or stopped</span><span><i class="l-pend"></i>pending or locked</span></div><div class="board" style="zoom:${state.zoom}">`;
+  r.stages.forEach((s, si) => {
+    const open = r.open_stage === s.stage && r.state !== 'aborted';
+    html += `<div class="stage ${s.locked ? 'locked' : ''} ${open ? 'open' : ''}" data-stage="${s.stage}">
+      <div class="stagehead"><span class="st">Stage ${s.stage}</span>${s.tasks.length > 1 ? `<span>${s.tasks.length} parallel</span>` : ''}${s.title ? `<span class="sm">${esc(s.title)}</span>` : ''}<span class="flag">${s.locked ? 'locked' : open ? 'open' : s.tasks.every(t => ['completed', 'skipped'].includes(t.status)) ? 'passed' : ''}</span></div>
+      <div class="lanes">${s.tasks.map(taskHtml).join('')}</div></div>`;
+    if (si < r.stages.length - 1) html += `<div class="connector">&darr;</div>`;
+  });
+  const sl = m.scrollLeft, stp = m.scrollTop;
+  m.innerHTML = html + `</div>`;
+  m.scrollLeft = sl; m.scrollTop = stp;
+  autoScroll(m, r);
+  m.querySelectorAll('.task').forEach(el => el.onclick = () => { state.selTask = state.selTask === el.dataset.t ? null : el.dataset.t; renderMain(); renderSide(); });
+}
+
+// auto scroll: bring the open stage into view when it changes, unless the user scrolled in the last few seconds
+const USER_SCROLL_GRACE_MS = 5000;
+let lastUserScroll = 0, lastFocusKey = null, progScrollUntil = 0;
+function markUser() { lastUserScroll = Date.now(); }
+['wheel', 'touchmove', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, e => { if (e.target.closest && e.target.closest('#main') || ev === 'keydown') markUser(); }, { passive: true }));
+document.getElementById('main').addEventListener('scroll', () => { if (Date.now() > progScrollUntil) markUser(); }, { passive: true });
+function autoScroll(m, r) {
+  const target = m.querySelector('.task.in_progress, .task.awaiting_approval, .task.failed')?.closest('.stage') || m.querySelector('.stage.open');
+  if (!target) return;
+  const key = target.dataset.stage;
+  if (key === lastFocusKey) return;
+  const first = lastFocusKey === null;
+  if (!first && Date.now() - lastUserScroll < USER_SCROLL_GRACE_MS) return; // retry on a later update
+  lastFocusKey = key;
+  const mr = m.getBoundingClientRect(), tr = target.getBoundingClientRect();
+  if (!first && tr.top >= mr.top + 8 && tr.bottom <= mr.bottom - 8) return; // already fully visible
+  progScrollUntil = Date.now() + 1200;
+  m.scrollTo({ top: m.scrollTop + tr.top - mr.top - 24, behavior: first ? 'auto' : 'smooth' });
+}
+
+// pick up a deferred scroll once the grace period is over, even if no new update arrives
+setInterval(() => { if (state.snap) autoScroll(document.getElementById('main'), state.snap); }, 1500);
+
+function field(label, inner) { return `<div class="field"><label>${label}</label>${inner}</div>`; }
+
+function renderSide() {
+  const r = state.snap, d = document.getElementById('side');
+  if (!r) { d.innerHTML = ''; return; }
+  const t = state.selTask && findTask(r, state.selTask);
+  const keepScroll = d.scrollTop;
+  let html = `<h4>Task</h4>`;
+  if (t) {
+    html += `<div style="font-weight:700;font-size:15px;margin-bottom:8px">${esc(t.title)}</div>`;
+    const btns = [];
+    if (t.status === 'awaiting_approval') btns.push(`<button id="a_approve" class="small primary">Approve</button>`, `<button id="a_reject" class="small danger">Reject</button>`);
+    if (t.status === 'failed') btns.push(`<button id="a_retry" class="small">Retry</button>`, `<button id="a_skip" class="small">Skip</button>`);
+    if (btns.length && (r.status === 'active' || r.status === 'paused')) html += `<div class="actions">${btns.join('')}</div>`;
+    html += `<div class="field kv">id: ${esc(t.task_id)}<br>stage ${t.stage}, lane ${t.lane}<br>status: ${esc(t.status)}<br>worker: ${esc(t.worker || '-')}<br>gate attempts: ${t.attempts} / ${t.max_attempts}${t.skippable ? '<br>skippable: yes' : ''}${t.lease_expires_at ? `<br>lease until ${fmtTime(t.lease_expires_at)}` : ''}</div>`;
+    if (t.description) html += field('Description', `<div>${esc(t.description)}</div>`);
+    if (t.done_when) html += field('Done when', `<div>${esc(t.done_when)}</div>`);
+    const lg = t.last_gate;
+    html += field(`Gates${lg ? ` (attempt ${lg.attempt || ''}, ${fmtTime(lg.at)})` : ''}`, t.gates.map((g, i) => {
+      const res = lg && lg.results && lg.results[i];
+      const cls = res ? gateClass(res) : 'none';
+      const word = { pass: 'PASS', fail: 'FAIL', wait: 'WAITING', none: 'NOT RUN' }[cls];
+      return `<div class="gl ${cls}"><div class="gh"><span class="gk">${word}</span><span>${esc(g.label)}</span></div>
+        ${res && res.detail ? `<div class="gd">${esc(res.detail)}</div>` : ''}${res && res.hint && cls === 'fail' ? `<div class="gd">hint: ${esc(res.hint)}</div>` : ''}
+        ${res && res.output ? `<pre>${esc(res.output)}</pre>` : ''}</div>`;
+    }).join(''));
+    if (t.result) html += field('Result (reported by agent)', `<div class="val">${esc(t.result)}</div>`);
+    if (t.outputs && Object.keys(t.outputs).length) html += field('Outputs', `<div class="val">${esc(Object.entries(t.outputs).map(([k, v]) => k + ' = ' + v).join('\n'))}</div>`);
+    if (t.artifacts && t.artifacts.length) html += field('Artifacts', `<div class="val">${esc(t.artifacts.map(a => a.path + ' (' + a.bytes + ' bytes)').join('\n'))}</div>`);
+    if (t.error) html += field('Error', `<div class="val" style="color:var(--red)">${esc(t.error)}</div>`);
+    if (t.last_error && !t.error) html += field('Previous error', `<div class="val">${esc(t.last_error)}</div>`);
+    if (t.skip_reason) html += field('Skip reason', `<div class="val">${esc(t.skip_reason)}</div>`);
+    if (t.approval) html += field('Approval', `<div class="val">approved via ${esc(t.approval.via)} at ${fmtTime(t.approval.at)}${t.approval.note ? '\n' + esc(t.approval.note) : ''}</div>`);
+  } else {
+    html += `<div class="empty">Select a task to see its gates, result and errors</div>`;
+    const snippet = `This work runs under TGP (Task Gate Protocol), run ${RUN_ID}.\nLoop: run "tgp next ${RUN_ID}", do ONLY the returned tasks, report each with "tgp done ${RUN_ID} <task_id> --result \"<evidence>\"" and follow the instruction field of every response. Never work ahead. On gate_failed, fix and report again. After any context loss, run "tgp next ${RUN_ID}".`;
+    html += field('Agent instruction snippet', `<textarea class="snippet" readonly>${esc(snippet)}</textarea>`);
+  }
+  const evs = r.events.filter(e => !t || e.task_id === t.task_id).slice().reverse();
+  html += `<div class="timeline"><h4>Timeline${t ? ' for this task' : ''} (${evs.length})</h4>${evs.map(e => `<div class="ev ${esc(e.type)}"><span class="ts">${fmtTime(e.ts)}</span><span><span class="et">${esc(e.type)}</span><br>${esc(e.message)}</span></div>`).join('') || '<div class="empty">No events</div>'}</div>`;
+  d.innerHTML = html;
+  d.scrollTop = keepScroll;
+  const q = id => document.getElementById(id);
+  if (t) {
+    const tp = '/tasks/' + encodeURIComponent(t.task_id);
+    if (q('a_approve')) q('a_approve').onclick = () => api(tp + '/approve', { note: prompt('Approval note (optional)') || '' });
+    if (q('a_reject')) q('a_reject').onclick = () => { const n = prompt('What should the agent fix?'); if (n !== null) api(tp + '/reject', { note: n }); };
+    if (q('a_retry')) q('a_retry').onclick = () => api(tp + '/retry');
+    if (q('a_skip')) q('a_skip').onclick = () => { const n = prompt('Reason for skipping'); if (n !== null) api(tp + '/skip', { reason: n || 'skipped by human on the canvas' }); };
+  }
+}
+
+function render() { renderTop(state.snap); renderMain(); renderSide(); }
+function setSnap(s) { state.snap = s; state.err = null; document.title = 'TGP: ' + s.title + ' (' + s.state + ')'; render(); }
+
+function setLive(on, txt) { const l = document.getElementById('live'); l.className = 'live ' + (on ? 'on' : 'off'); document.getElementById('livetxt').textContent = txt; }
+
+// live data: SSE first, poll fallback every 2s
+let pollTimer = null;
+async function poll() {
+  try {
+    const res = await fetch('/api/v1/runs/' + encodeURIComponent(RUN_ID));
+    const j = await res.json();
+    if (!res.ok) { state.err = (j.error && j.error.message) || 'not found'; state.snap = null; render(); return; }
+    if (!state.snap || j.version !== state.snap.version) setSnap(j);
+  } catch { setLive(false, 'offline'); }
+}
+function connect() {
+  if (!window.EventSource) { setLive(true, 'polling'); pollTimer = setInterval(poll, 2000); return poll(); }
+  const es = new EventSource('/api/v1/runs/' + encodeURIComponent(RUN_ID) + '/events');
+  es.addEventListener('snapshot', e => { setLive(true, 'live'); if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } setSnap(JSON.parse(e.data)); });
+  es.onerror = () => {
+    setLive(false, 'reconnecting');
+    if (!pollTimer) { pollTimer = setInterval(poll, 2000); poll(); }
+  };
+}
+
+document.getElementById('copy').onclick = () => navigator.clipboard && navigator.clipboard.writeText(location.origin + '/r/' + RUN_ID);
+document.getElementById('pausebtn').onclick = () => api('/pause');
+document.getElementById('resumebtn').onclick = () => api('/resume');
+document.getElementById('abortbtn').onclick = () => { if (confirm('Abort this run? The agent will be told to stop.')) api('/abort', { reason: 'aborted on the canvas' }); };
+
+// zoom: Ctrl + mouse wheel zooms the board around the cursor, Ctrl+0 resets
+function setZoom(z, clientX, clientY) {
+  const main = document.getElementById('main'), old = state.zoom;
+  z = Math.min(2, Math.max(0.3, Math.round(z * 100) / 100));
+  if (z === old) return;
+  const rect = main.getBoundingClientRect();
+  const ox = (clientX ?? rect.left + rect.width / 2) - rect.left, oy = (clientY ?? rect.top + rect.height / 2) - rect.top;
+  const px = ox + main.scrollLeft, py = oy + main.scrollTop;
+  state.zoom = z;
+  const b = main.querySelector('.board'); if (b) b.style.zoom = z;
+  main.scrollLeft = px * (z / old) - ox; main.scrollTop = py * (z / old) - oy;
+  document.getElementById('zoomtag').textContent = Math.round(z * 100) + '%';
+}
+document.getElementById('main').addEventListener('wheel', e => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  setZoom(state.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX, e.clientY);
+}, { passive: false });
+document.addEventListener('keydown', e => { if (e.ctrlKey && (e.key === '0')) { e.preventDefault(); setZoom(1); } });
+document.getElementById('zoomtag').onclick = () => setZoom(1);
+
+// refresh relative times (idle banner, elapsed) without new data
+setInterval(() => { if (state.snap && state.snap.status === 'active') renderMain(); }, 5000);
+renderTop(null);
+connect();
+</script>
+</body>
+</html>

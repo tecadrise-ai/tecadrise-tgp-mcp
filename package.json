@@ -1,0 +1,22 @@
+{
+  "name": "tgp",
+  "version": "1.0.0",
+  "description": "TGP (Task Gate Protocol): gated, step-by-step workflow engine for LLM agents",
+  "type": "module",
+  "bin": { "tgp": "bin/tgp.js" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "node bin/tgp.js serve --port 8787"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tecadrise-ai/tecadrise-tgp-mcp.git"
+  },
+  "homepage": "https://github.com/tecadrise-ai/tecadrise-tgp-mcp",
+  "bugs": {
+    "url": "https://github.com/tecadrise-ai/tecadrise-tgp-mcp/issues"
+  },
+  "dependencies": { "yaml": "^2.9.1" }
+}

@@ -1,0 +1,7 @@
+node_modules/
+serve.log
+*.log
+serve.err.log
+serve.pid
+runs-work/
+workflows/stockvid-v02.yaml
