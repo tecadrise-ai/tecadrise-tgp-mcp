@@ -90,12 +90,16 @@
   .chip.draft { color: var(--amber); border-color: #f3d79a; background: var(--amber-bg); }
   .stats { display: flex; gap: 22px; margin: 16px 0 10px; color: var(--muted); font-size: 12px; }
   .stats b { color: var(--text); }
-  .progress { position: relative; height: 6px; background: #e6e9ef; border-radius: 999px; margin: 4px 0 26px; }
+  .progress { position: relative; height: 6px; background: #e6e9ef; border-radius: 999px; margin: 4px 0 38px; }
   .progress > .fill { height: 100%; background: var(--green); border-radius: 999px; transition: width .4s; }
   /* one dot per step on the progress bar, click to jump to that step's card */
   .pdots { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; justify-content: space-between; pointer-events: none; }
   .pdot { width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #c3c9d4; box-sizing: border-box; cursor: pointer; pointer-events: auto; padding: 0; transition: transform .12s; }
+  .pdot { position: relative; overflow: visible; }
+  .pdot .pn { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); font-size: 9px; line-height: 1; color: var(--muted); font-weight: 400; pointer-events: none; }
+  .pdot.in_progress .pn, .pdot.awaiting_approval .pn, .pdot.failed .pn, .pdot.sel .pn { color: var(--text); font-weight: 700; }
   .pdot:hover { transform: scale(1.6); }
+  .pdot:hover .pn { transform: translateX(-50%) scale(.625); top: 9px; }
   .pdot.completed { background: var(--green); border-color: var(--green); }
   .pdot.skipped { background: #c3c9d4; border-color: #c3c9d4; }
   .pdot.in_progress { background: var(--yellow-bar); border-color: var(--green); }
@@ -106,7 +110,7 @@
   @keyframes flash { 0% { box-shadow: 0 0 0 4px #2563eb; } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
   .banner { background: var(--amber-bg); border: 1px solid #f3d79a; color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-top: 14px; font-size: 12px; }
 
-  .board { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 20px; max-width: 864px; }
+  .board { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 20px; max-width: 864px; margin: 0 auto; }
   .stage { width: 100%; scroll-margin: 24px; }
   .stagehead { display: flex; gap: 12px; align-items: baseline; margin-bottom: 8px; color: var(--muted);
                font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
@@ -116,9 +120,9 @@
   .stage.locked { opacity: .5; }
   .stage.open .stagehead { color: var(--green); font-weight: 600; }
   .stage.open .lanes { border-color: var(--green-line); }
-  .lanes { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+  .lanes { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; justify-content: center; }
   .lanes > .task { flex: 1 1 300px; min-width: 300px; max-width: 420px; }
-  .connector { align-self: flex-start; width: 300px; max-width: 420px; text-align: center; color: #b9c0cd; font-size: 18px; line-height: 1; margin: 6px 0 10px; user-select: none; }
+  .connector { align-self: center; width: 300px; max-width: 420px; text-align: center; color: #b9c0cd; font-size: 18px; line-height: 1; margin: 6px 0 10px; user-select: none; }
   .connector::before { content: ""; display: block; width: 2px; height: 12px; background: #d5dae3; margin: 0 auto 2px; }
 
   .task { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 12px 12px 16px;
@@ -155,6 +159,12 @@
   .addstage:hover { color: var(--green); border-color: var(--green); }
   .zoomtag { position: fixed; right: 16px; bottom: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
              padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .totop { position: fixed; right: 16px; bottom: 52px; width: 38px; height: 38px; border-radius: 50%; background: var(--green); color: #fff; border: 0;
+    font-size: 18px; line-height: 38px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18); opacity: 0; pointer-events: none; transition: opacity .2s, transform .15s; z-index: 20; }
+  .totop { display: flex; align-items: center; justify-content: center; padding: 0; }
+  .totop svg { display: block; }
+  .totop.show { opacity: .92; pointer-events: auto; }
+  .totop:hover { opacity: 1; transform: translateY(-2px); }
   .zoomtag:hover { color: var(--text); border-color: #b9c0cd; }
   .notfound { max-width: 420px; margin: 80px auto; text-align: center; }
 
@@ -175,7 +185,7 @@
   .task.stopped::before, .stopped .diode { background: var(--red); }
   .stopped .diode { animation: none; }
   .stopped .status { color: var(--red); }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin: 0 0 10px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin: 0 0 32px; }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
   .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid; }
   .legend .l-done { background: var(--green-bg); border-color: var(--green); }
@@ -183,6 +193,16 @@
   .legend .l-wait { background: var(--orange-bg); border-color: var(--orange-bar); }
   .legend .l-fail { background: var(--red-bg); border-color: var(--red); }
   .legend .l-pend { background: var(--panel); border-color: #cfd5df; }
+  /* focus view: show only the current step(s); toggle to the full workflow on the legend line */
+  .viewtog { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .viewtog button { border: 0; background: var(--panel); color: var(--muted); font: inherit; font-size: 11px; padding: 3px 10px; cursor: pointer; }
+  .viewtog button.on { background: var(--green); color: #fff; }
+  .focusbar { text-align: center; color: var(--muted); font-size: 12px; margin: -16px 0 14px; }
+  .focusbar a { color: #2563eb; cursor: pointer; text-decoration: underline; }
+  .alldone { text-align: center; padding: 28px 12px; color: var(--green); font-weight: 600; }
+  .alldone .kv { display: block; color: var(--muted); font-weight: 400; margin-top: 6px; }
+  .board.focus .stage.enter { animation: slidein .35s ease-out; }
+  @keyframes slidein { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   @keyframes pulseA { 0% { box-shadow: 0 0 0 0 rgba(249,115,22,.55); } 70% { box-shadow: 0 0 0 9px rgba(249,115,22,0); } 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); } }
   .task.gatefail { border-color: var(--red-line); }
   .gates { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
@@ -220,6 +240,7 @@
   <button id="abortbtn" class="danger">Abort run</button>
 </div>
 
+<button type="button" class="totop" id="totop" title="Jump to top"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <div class="zoomtag" id="zoomtag" title="Ctrl + mouse wheel to zoom, click or Ctrl+0 to reset">100%</div>
 <div class="side" id="side"></div>
 <div class="main" id="main"><div class="empty">Loading run...</div></div>
@@ -232,7 +253,17 @@ const dur = (a, b) => { if (!a) return ''; const s = Math.round(((b ? Date.parse
 const IDLE_MIN = 5;
 
 const RUN_ID = decodeURIComponent(location.pathname.split('/').filter(Boolean)[1] || '');
-const state = { snap: null, selTask: null, zoom: 1, err: null };
+const state = { snap: null, selTask: null, zoom: 1, err: null, view: (() => { try { return localStorage.getItem('tgp.view') || 'focus'; } catch { return 'focus'; } })(), peek: null };
+let lastFocusStages = null;
+function setView(v) { state.view = v; state.peek = null; try { localStorage.setItem('tgp.view', v); } catch {} lastFocusKey = null; renderMain(); }
+// which stages the focus view shows: a peeked step, else the stages with live work, else the open stage
+function focusStages(r) {
+  if (state.peek) { const s = r.stages.find(s => s.tasks.some(t => t.task_id === state.peek)); if (s) return [s]; }
+  const live = r.stages.filter(s => s.tasks.some(t => ['in_progress', 'awaiting_approval', 'failed'].includes(t.status)));
+  if (live.length) return live;
+  const open = r.stages.find(s => s.stage === r.open_stage);
+  return open ? [open] : [];
+}
 const allTasks = r => r.stages.flatMap(s => s.tasks);
 const findTask = (r, id) => allTasks(r).find(t => t.task_id === id);
 
@@ -288,25 +319,40 @@ function renderMain() {
   if (r.state === 'aborted') html += `<div class="banner red">This run was aborted. Steps that were still open are shown red as stopped.</div>`;
   if (idle) html += `<div class="banner gray">Agent idle: no agent call in the last ${IDLE_MIN} minutes.</div>`;
   html += `<div class="stats"><span><b>${p.completed}</b> / ${p.total} done</span><span><b>${tasks.filter(t => t.status === 'in_progress').length}</b> running</span><span><b>${p.failed}</b> failed</span><span><b>${p.skipped}</b> skipped</span><span>workdir <b class="kv">${esc(r.params.workdir || '')}</b></span></div>
-    <div class="progress"><div class="fill" style="width:${p.percent}%"></div><div class="pdots">${tasks.map((t, i) => { const st = r.state === 'aborted' && ['in_progress', 'awaiting_approval'].includes(t.status) ? 'stopped' : t.status; return `<button type="button" class="pdot ${st} ${state.selTask === t.task_id ? 'sel' : ''}" data-t="${esc(t.task_id)}" title="${i + 1}. ${esc(t.title)} (${esc(st.replace('_', ' '))})"></button>`; }).join('')}</div></div>
-    <div class="legend"><span><i class="l-done"></i>done</span><span><i class="l-run"></i>running</span><span><i class="l-wait"></i>awaiting approval</span><span><i class="l-fail"></i>failed or stopped</span><span><i class="l-pend"></i>pending or locked</span></div><div class="board" style="zoom:${state.zoom}">`;
-  r.stages.forEach((s, si) => {
+    <div class="progress"><div class="fill" style="width:${p.percent}%"></div><div class="pdots">${tasks.map((t, i) => { const st = r.state === 'aborted' && ['in_progress', 'awaiting_approval'].includes(t.status) ? 'stopped' : t.status; return `<button type="button" class="pdot ${st} ${state.selTask === t.task_id ? 'sel' : ''}" data-t="${esc(t.task_id)}" title="${i + 1}. ${esc(t.title)} (${esc(st.replace('_', ' '))})"><span class="pn">${i + 1}</span></button>`; }).join('')}</div></div>
+    <div class="legend"><span><i class="l-done"></i>done</span><span><i class="l-run"></i>running</span><span><i class="l-wait"></i>awaiting approval</span><span><i class="l-fail"></i>failed or stopped</span><span><i class="l-pend"></i>pending or locked</span><span class="viewtog"><button type="button" data-v="focus" class="${state.view === 'focus' ? 'on' : ''}">Current step</button><button type="button" data-v="full" class="${state.view === 'full' ? 'on' : ''}">Full workflow</button></span></div>`;
+  const focus = state.view === 'focus';
+  const shown = focus ? focusStages(r) : r.stages;
+  if (focus) {
+    const key = shown.map(s => s.stage).join(',');
+    const changed = key !== lastFocusStages; lastFocusStages = key;
+    if (state.peek) html += `<div class="focusbar">Viewing a single step. <a data-act="back">Back to current step</a></div>`;
+    html += `<div class="board focus" style="zoom:${state.zoom}">`;
+    if (!shown.length) html += r.state === 'completed' || r.status === 'completed' || p.completed + p.skipped === p.total
+      ? `<div class="alldone">All ${p.total} steps done.<span class="kv">Switch to Full workflow to see every step.</span></div>`
+      : `<div class="alldone" style="color:var(--muted)">No step is open right now.<span class="kv">Switch to Full workflow to see every step.</span></div>`;
+    shown.forEach(s => { s._enter = changed; });
+  } else html += `<div class="board" style="zoom:${state.zoom}">`;
+  shown.forEach((s, si) => {
     const open = r.open_stage === s.stage && r.state !== 'aborted';
-    html += `<div class="stage ${s.locked ? 'locked' : ''} ${open ? 'open' : ''}" data-stage="${s.stage}">
+    html += `<div class="stage ${s.locked ? 'locked' : ''} ${open ? 'open' : ''} ${s._enter ? 'enter' : ''}" data-stage="${s.stage}">
       <div class="stagehead"><span class="st">Stage ${s.stage}</span>${s.tasks.length > 1 ? `<span>${s.tasks.length} parallel</span>` : ''}${s.title ? `<span class="sm">${esc(s.title)}</span>` : ''}<span class="flag">${s.locked ? 'locked' : open ? 'open' : s.tasks.every(t => ['completed', 'skipped'].includes(t.status)) ? 'passed' : ''}</span></div>
       <div class="lanes">${s.tasks.map(taskHtml).join('')}</div></div>`;
-    if (si < r.stages.length - 1) html += `<div class="connector">&darr;</div>`;
+    if (si < shown.length - 1) html += `<div class="connector">&darr;</div>`;
   });
   const sl = m.scrollLeft, stp = m.scrollTop;
   m.innerHTML = html + `</div>`;
   m.scrollLeft = sl; m.scrollTop = stp;
   autoScroll(m, r);
   m.querySelectorAll('.pdot').forEach(el => el.onclick = e => { e.stopPropagation(); jumpTo(el.dataset.t); });
+  m.querySelectorAll('.viewtog button').forEach(el => el.onclick = () => setView(el.dataset.v));
+  m.querySelectorAll('[data-act="back"]').forEach(el => el.onclick = () => { state.peek = null; state.selTask = null; renderMain(); renderSide(); });
   m.querySelectorAll('.task').forEach(el => el.onclick = () => { state.selTask = state.selTask === el.dataset.t ? null : el.dataset.t; renderMain(); renderSide(); });
 }
 
 // progress bar dot clicked: select that step and scroll its card into view
 function jumpTo(id) {
+  if (state.view === 'focus') { state.peek = id; state.selTask = id; renderMain(); renderSide(); document.getElementById('main').scrollTo({ top: 0, behavior: 'smooth' }); return; }
   state.selTask = id; markUser(); renderMain(); renderSide();
   const m = document.getElementById('main'), card = m.querySelector(`.task[data-t="${CSS.escape(id)}"]`);
   if (!card) return;
@@ -323,6 +369,7 @@ function markUser() { lastUserScroll = Date.now(); }
 ['wheel', 'touchmove', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, e => { if (e.target.closest && e.target.closest('#main') || ev === 'keydown') markUser(); }, { passive: true }));
 document.getElementById('main').addEventListener('scroll', () => { if (Date.now() > progScrollUntil) markUser(); }, { passive: true });
 function autoScroll(m, r) {
+  if (state.view === 'focus') return;
   const target = m.querySelector('.task.in_progress, .task.awaiting_approval, .task.failed')?.closest('.stage') || m.querySelector('.stage.open');
   if (!target) return;
   const key = target.dataset.stage;
@@ -441,6 +488,11 @@ document.getElementById('main').addEventListener('wheel', e => {
 }, { passive: false });
 document.addEventListener('keydown', e => { if (e.ctrlKey && (e.key === '0')) { e.preventDefault(); setZoom(1); } });
 document.getElementById('zoomtag').onclick = () => setZoom(1);
+// jump to top: shown in the Full workflow view once you scroll down
+function updateTotop() { const m = document.getElementById('main'); document.getElementById('totop').classList.toggle('show', state.view === 'full' && m.scrollTop > 300); }
+document.getElementById('main').addEventListener('scroll', updateTotop, { passive: true });
+setInterval(updateTotop, 1000);
+document.getElementById('totop').onclick = () => { markUser(); progScrollUntil = Date.now() + 1200; document.getElementById('main').scrollTo({ top: 0, behavior: 'smooth' }); };
 
 // refresh relative times (idle banner, elapsed) without new data
 setInterval(() => { if (state.snap && state.snap.status === 'active') renderMain(); }, 5000);
