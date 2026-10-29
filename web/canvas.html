@@ -90,8 +90,20 @@
   .chip.draft { color: var(--amber); border-color: #f3d79a; background: var(--amber-bg); }
   .stats { display: flex; gap: 22px; margin: 16px 0 10px; color: var(--muted); font-size: 12px; }
   .stats b { color: var(--text); }
-  .progress { height: 6px; background: #e6e9ef; border-radius: 999px; overflow: hidden; margin: 0 0 24px; }
-  .progress > div { height: 100%; background: var(--green); transition: width .4s; }
+  .progress { position: relative; height: 6px; background: #e6e9ef; border-radius: 999px; margin: 4px 0 26px; }
+  .progress > .fill { height: 100%; background: var(--green); border-radius: 999px; transition: width .4s; }
+  /* one dot per step on the progress bar, click to jump to that step's card */
+  .pdots { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; justify-content: space-between; pointer-events: none; }
+  .pdot { width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #c3c9d4; box-sizing: border-box; cursor: pointer; pointer-events: auto; padding: 0; transition: transform .12s; }
+  .pdot:hover { transform: scale(1.6); }
+  .pdot.completed { background: var(--green); border-color: var(--green); }
+  .pdot.skipped { background: #c3c9d4; border-color: #c3c9d4; }
+  .pdot.in_progress { background: var(--yellow-bar); border-color: var(--green); }
+  .pdot.awaiting_approval { background: var(--orange-bar); border-color: var(--orange-bar); }
+  .pdot.failed, .pdot.stopped { background: var(--red); border-color: var(--red); }
+  .pdot.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2563eb; }
+  .task.flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 4px #2563eb; } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
   .banner { background: var(--amber-bg); border: 1px solid #f3d79a; color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-top: 14px; font-size: 12px; }
 
   .board { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 20px; max-width: 864px; }
@@ -276,7 +288,7 @@ function renderMain() {
   if (r.state === 'aborted') html += `<div class="banner red">This run was aborted. Steps that were still open are shown red as stopped.</div>`;
   if (idle) html += `<div class="banner gray">Agent idle: no agent call in the last ${IDLE_MIN} minutes.</div>`;
   html += `<div class="stats"><span><b>${p.completed}</b> / ${p.total} done</span><span><b>${tasks.filter(t => t.status === 'in_progress').length}</b> running</span><span><b>${p.failed}</b> failed</span><span><b>${p.skipped}</b> skipped</span><span>workdir <b class="kv">${esc(r.params.workdir || '')}</b></span></div>
-    <div class="progress"><div style="width:${p.percent}%"></div></div>
+    <div class="progress"><div class="fill" style="width:${p.percent}%"></div><div class="pdots">${tasks.map((t, i) => { const st = r.state === 'aborted' && ['in_progress', 'awaiting_approval'].includes(t.status) ? 'stopped' : t.status; return `<button type="button" class="pdot ${st} ${state.selTask === t.task_id ? 'sel' : ''}" data-t="${esc(t.task_id)}" title="${i + 1}. ${esc(t.title)} (${esc(st.replace('_', ' '))})"></button>`; }).join('')}</div></div>
     <div class="legend"><span><i class="l-done"></i>done</span><span><i class="l-run"></i>running</span><span><i class="l-wait"></i>awaiting approval</span><span><i class="l-fail"></i>failed or stopped</span><span><i class="l-pend"></i>pending or locked</span></div><div class="board" style="zoom:${state.zoom}">`;
   r.stages.forEach((s, si) => {
     const open = r.open_stage === s.stage && r.state !== 'aborted';
@@ -289,7 +301,19 @@ function renderMain() {
   m.innerHTML = html + `</div>`;
   m.scrollLeft = sl; m.scrollTop = stp;
   autoScroll(m, r);
+  m.querySelectorAll('.pdot').forEach(el => el.onclick = e => { e.stopPropagation(); jumpTo(el.dataset.t); });
   m.querySelectorAll('.task').forEach(el => el.onclick = () => { state.selTask = state.selTask === el.dataset.t ? null : el.dataset.t; renderMain(); renderSide(); });
+}
+
+// progress bar dot clicked: select that step and scroll its card into view
+function jumpTo(id) {
+  state.selTask = id; markUser(); renderMain(); renderSide();
+  const m = document.getElementById('main'), card = m.querySelector(`.task[data-t="${CSS.escape(id)}"]`);
+  if (!card) return;
+  const mr = m.getBoundingClientRect(), tr = card.getBoundingClientRect();
+  progScrollUntil = Date.now() + 1200;
+  m.scrollTo({ top: m.scrollTop + tr.top - mr.top - mr.height / 3, behavior: 'smooth' });
+  card.classList.add('flash');
 }
 
 // auto scroll: bring the open stage into view when it changes, unless the user scrolled in the last few seconds

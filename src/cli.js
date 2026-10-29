@@ -1,9 +1,11 @@
 // tgp command line. JSON envelope on stdout by default, --pretty for humans.
+import fs from 'node:fs';
 import * as engine from './engine.js';
 import { TgpError, defaultPort } from './util.js';
 import { sendTest } from './notify.js';
 
-const VALUE_FLAGS = new Set(['param', 'title', 'worker', 'result', 'artifact', 'output', 'error', 'reason', 'note', 'port', 'host']);
+const TEXT_FLAGS = ['result', 'error', 'reason', 'note'];
+const VALUE_FLAGS = new Set(['param', 'title', 'worker', 'result', 'artifact', 'output', 'error', 'reason', 'note', 'port', 'host', ...TEXT_FLAGS.map(k => k + '-file')]);
 const MULTI = new Set(['param', 'artifact', 'output']);
 
 export function parseArgs(argv) {
@@ -19,6 +21,16 @@ export function parseArgs(argv) {
       } else flags[k] = v === undefined ? true : v;
     } else if (a === '-h') flags.help = true;
     else pos.push(a);
+  }
+  // --note-file, --result-file, --error-file, --reason-file: read the text verbatim from a UTF-8 file.
+  // Use these when shell quoting would mangle the text (PowerShell drops escaped double quotes).
+  for (const k of TEXT_FLAGS) {
+    const f = flags[k + '-file'];
+    if (f === undefined) continue;
+    if (flags[k] !== undefined) throw new TgpError('USAGE', `Use either --${k} or --${k}-file, not both.`, 'See: tgp help');
+    try { flags[k] = fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '').replace(/\r?\n$/, ''); }
+    catch (e) { throw new TgpError('USAGE', `Cannot read --${k}-file ${f}: ${e.message}`, 'Give a readable UTF-8 text file.'); }
+    delete flags[k + '-file'];
   }
   return { pos, flags };
 }
@@ -42,6 +54,8 @@ Human controls:
   tgp approve <run> <task> [--note "..."]        approve a task awaiting approval
   tgp reject <run> <task> [--note "..."]         send it back to the agent
   tgp retry <run> <task>                         reset a failed task
+  Any --note, --result, --error or --reason can be given as --note-file <path> etc. to pass the text
+  verbatim from a UTF-8 file (safe for quotes on PowerShell).
   tgp pause <run> | tgp resume <run> | tgp abort <run> [--reason "..."]
 
 Other:
