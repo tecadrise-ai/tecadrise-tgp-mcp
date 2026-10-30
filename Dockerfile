@@ -23,7 +23,7 @@ VOLUME /data
 
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8787/ >/dev/null || exit 1
+  CMD wget -qO- "http://127.0.0.1:${TGP_PORT}/" >/dev/null || exit 1
 
 ENTRYPOINT ["node", "bin/tgp.js"]
-CMD ["serve", "--host", "0.0.0.0", "--port", "8787"]
+CMD ["serve", "--host", "0.0.0.0"]
