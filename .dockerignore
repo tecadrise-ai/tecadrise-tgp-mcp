@@ -1,0 +1,11 @@
+.git
+node_modules
+*.log
+serve.pid
+runs-work
+_original
+docs/demo
+**/*.bak*
+workflows/stockvid-v02.yaml
+Dockerfile
+.dockerignore

@@ -128,6 +128,30 @@ From an agent on another machine: the CLI works on the local store only, so an a
 
 Set `TGP_PUBLIC_URL` to the address the human opens so canvas links in responses are right.
 
+## Docker (optional)
+
+You do not need Docker to use TGP. On Windows, `start.bat` is the simplest way. The container is for Linux, macOS or a server.
+
+```bash
+docker build -t tgp .
+docker run -d --name tgp -p 8787:8787 -v tgp-data:/data tgp
+```
+
+Open http://localhost:8787 for the canvas. Runs, `config.json` and your own workflows are kept in the `tgp-data` volume (`/data` inside the container). To use workflows from a folder on your machine, add `-v "$PWD/my-workflows:/data/workflows"`.
+
+Run CLI commands inside the container:
+
+```bash
+docker exec tgp node bin/tgp.js templates
+docker exec tgp node bin/tgp.js start publish-blog-article
+```
+
+Notes:
+
+- Windows toast notifications are turned off in the container (`TGP_NOTIFY=0`), because they need Windows.
+- Gates run inside the container, so a gate that calls a program (for example Python) only works if that program is in the image. Extend the image with your own `FROM tgp` Dockerfile if your workflows need more tools.
+- For MCP clients, run `docker run -i --rm -v tgp-data:/data tgp mcp` as the server command.
+
 ## Quick start
 
 ```
